@@ -146,7 +146,7 @@ def save_and_compare(records, out_dir, repeat=50):
     out_dir.mkdir(parents=True, exist_ok=True)
     df = pd.DataFrame(records)
 
-    csv_path = out_dir / "weather.csv"s
+    csv_path = out_dir / "weather.csv"
     parquet_path = out_dir / "weather.parquet"
 
     # 첫 호출에는 pyarrow 초기화 같은 일회성 비용이 섞여 Parquet이 실제보다 느리게 측정된다.
