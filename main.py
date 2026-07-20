@@ -80,7 +80,9 @@ async def fetch(client, name, url):
 
 async def fetch_all(urls=URLS):
     # asyncio.gather로 3개 요청을 동시에 실행해 {name: json} 형태로 반환
-    async with httpx.AsyncClient() as client:
+    # 일시적 네트워크 오류에 대비해 전송 계층에서 2회 재시도한다 (강의 파트 3 재시도 개념)
+    transport = httpx.AsyncHTTPTransport(retries=2)
+    async with httpx.AsyncClient(transport=transport) as client:
         tasks = [fetch(client, name, url) for name, url in urls.items()]
         results = await asyncio.gather(*tasks, return_exceptions=True)
     return dict(results)
@@ -144,8 +146,15 @@ def save_and_compare(records, out_dir, repeat=50):
     out_dir.mkdir(parents=True, exist_ok=True)
     df = pd.DataFrame(records)
 
-    csv_path = out_dir / "weather.csv"
+    csv_path = out_dir / "weather.csv"s
     parquet_path = out_dir / "weather.parquet"
+
+    # 첫 호출에는 pyarrow 초기화 같은 일회성 비용이 섞여 Parquet이 실제보다 느리게 측정된다.
+    # 측정 전에 한 번씩 warm-up)을 해서 그 비용을 제외한다.
+    df.to_csv(csv_path, index=False)
+    df.to_parquet(parquet_path, index=False)
+    pd.read_csv(csv_path)
+    pd.read_parquet(parquet_path)
 
     perf = {
         # timeit은 N번 실행 총 시간을 주므로 N으로 나눠 1회 평균을 낸다
